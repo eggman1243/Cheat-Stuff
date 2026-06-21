@@ -1,0 +1,345 @@
+(function () {
+
+    const host = location.hostname.toLowerCase();
+    const isRoblox = host === "roblox.com" || host.endsWith(".roblox.com");
+    if (!isRoblox) return;
+
+    const KEY_PROFILE = "fakeProfileData";
+    const KEY_MIN = "fakeProfileMin";
+    const KEY_POS = "fakeProfilePos";
+    const KEY_OPACITY = "fakeProfileOpacity";
+    const KEY_LAST_FETCH = "fakeProfileLastFetch";
+
+    const usernameSelectors = [
+        ".profile-name",
+        ".avatar-card-name",
+        ".rbx-user-name",
+        ".header-title"
+    ];
+
+    const avatarSelectors = [
+        ".avatar-card-image img",
+        ".thumbnail-2d img",
+        "img[alt='Avatar']",
+        ".profile-avatar img"
+    ];
+
+    function setStatus(statusEl, msg, color = "red", time = 2000) {
+        statusEl.style.color = color;
+        statusEl.textContent = msg;
+
+        if (statusEl._timeout) clearTimeout(statusEl._timeout);
+
+        statusEl._timeout = setTimeout(() => {
+            statusEl.textContent = "";
+        }, time);
+    }
+
+    function applyProfile(p) {
+        if (!p) return;
+
+        document.querySelectorAll(usernameSelectors.join(",")).forEach(el => {
+            el.textContent = p.displayName || p.name || el.textContent;
+        });
+
+        document.querySelectorAll(avatarSelectors.join(",")).forEach(el => {
+            if (p.avatarUrl && el.src !== p.avatarUrl) {
+                el.src = p.avatarUrl;
+            }
+        });
+
+        document.querySelectorAll("a[href*='/users/']").forEach(a => {
+            a.href = "https://www.roblox.com/users/" + p.id + "/profile";
+        });
+    }
+
+    function createUI() {
+
+        if (document.getElementById("fake-profile-panel")) return;
+
+        const box = document.createElement("div");
+
+        box.id = "fake-profile-panel";
+
+        box.style.position = "fixed";
+        box.style.top = "20px";
+        box.style.right = "20px";
+        box.style.zIndex = "999999";
+        box.style.background = "#fff";
+        box.style.borderRadius = "6px";
+        box.style.color = "#000";
+        box.style.fontFamily = "Arial, sans-serif";
+        box.style.width = "260px";
+        box.style.boxShadow = "0 0 10px rgba(0,0,0,0.4)";
+        box.style.userSelect = "none";
+
+        const header = document.createElement("div");
+
+        header.style.display = "flex";
+        header.style.alignItems = "center";
+        header.style.justifyContent = "space-between";
+        header.style.padding = "6px 8px";
+        header.style.cursor = "move";
+        header.style.background = "#0d6efd";
+        header.style.color = "#fff";
+        header.style.borderTopLeftRadius = "6px";
+        header.style.borderTopRightRadius = "6px";
+
+        const title = document.createElement("span");
+        title.textContent = "Weird Profile Troll";
+        title.style.fontSize = "13px";
+
+        const btnWrap = document.createElement("div");
+
+        const minBtn = document.createElement("button");
+        minBtn.textContent = "–";
+
+        const closeBtn = document.createElement("button");
+        closeBtn.textContent = "x";
+
+        [minBtn, closeBtn].forEach(b => {
+            b.style.width = "20px";
+            b.style.height = "20px";
+            b.style.padding = "0";
+            b.style.border = "none";
+            b.style.borderRadius = "3px";
+            b.style.cursor = "pointer";
+            b.style.color = "#fff";
+            b.style.fontSize = "12px";
+        });
+
+        minBtn.style.background = "#0b5ed7";
+        closeBtn.style.background = "#bb2d3b";
+
+        btnWrap.appendChild(minBtn);
+        btnWrap.appendChild(closeBtn);
+
+        header.appendChild(title);
+        header.appendChild(btnWrap);
+
+        const body = document.createElement("div");
+        body.style.padding = "10px";
+        body.style.display = "block";
+
+        const userLabel = document.createElement("div");
+        userLabel.textContent = "Username:";
+        userLabel.style.fontSize = "12px";
+
+        const userInput = document.createElement("input");
+        userInput.type = "text";
+        userInput.style.width = "100%";
+        userInput.style.padding = "5px";
+        userInput.style.marginBottom = "6px";
+
+        const status = document.createElement("div");
+        status.style.fontSize = "11px";
+        status.style.height = "14px";
+        status.style.marginBottom = "6px";
+
+        const applyBtn = document.createElement("button");
+        applyBtn.textContent = "Apply";
+        applyBtn.style.width = "100%";
+        applyBtn.style.padding = "6px";
+        applyBtn.style.border = "none";
+        applyBtn.style.borderRadius = "4px";
+        applyBtn.style.background = "#198754";
+        applyBtn.style.color = "#fff";
+        applyBtn.style.cursor = "pointer";
+
+        const opacitySlider = document.createElement("input");
+        opacitySlider.type = "range";
+        opacitySlider.min = "20";
+        opacitySlider.max = "100";
+        opacitySlider.value = sessionStorage.getItem(KEY_OPACITY) || "100";
+        opacitySlider.style.width = "100%";
+
+        body.appendChild(userLabel);
+        body.appendChild(userInput);
+        body.appendChild(status);
+        body.appendChild(applyBtn);
+        body.appendChild(opacitySlider);
+
+        box.appendChild(header);
+        box.appendChild(body);
+
+        document.body.appendChild(box);
+
+        box.style.opacity = (opacitySlider.value / 100).toString();
+
+        const saved = sessionStorage.getItem(KEY_PROFILE);
+
+        if (saved) {
+            try {
+                const p = JSON.parse(saved);
+                if (p.name) userInput.value = p.name;
+                applyProfile(p);
+            } catch (e) {}
+        }
+
+        const savedMin = sessionStorage.getItem(KEY_MIN);
+        if (savedMin === "1") body.style.display = "none";
+
+        const savedPos = sessionStorage.getItem(KEY_POS);
+
+        if (savedPos) {
+            try {
+                const p = JSON.parse(savedPos);
+                box.style.left = p.x + "px";
+                box.style.top = p.y + "px";
+                box.style.right = "auto";
+            } catch (e) {}
+        }
+
+        opacitySlider.oninput = function () {
+            box.style.opacity = (this.value / 100).toString();
+            sessionStorage.setItem(KEY_OPACITY, this.value);
+        };
+
+        let dragging = false;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        header.addEventListener("mousedown", function (e) {
+            dragging = true;
+            const rect = box.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            box.style.right = "auto";
+        });
+
+        document.addEventListener("mousemove", function (e) {
+            if (!dragging) return;
+            box.style.left = (e.clientX - offsetX) + "px";
+            box.style.top = (e.clientY - offsetY) + "px";
+        });
+
+        document.addEventListener("mouseup", function () {
+            if (!dragging) return;
+            dragging = false;
+            const rect = box.getBoundingClientRect();
+            sessionStorage.setItem(KEY_POS, JSON.stringify({ x: rect.left, y: rect.top }));
+        });
+
+        closeBtn.onclick = function () {
+            sessionStorage.removeItem(KEY_PROFILE);
+            sessionStorage.removeItem(KEY_MIN);
+            sessionStorage.removeItem(KEY_POS);
+            sessionStorage.removeItem(KEY_OPACITY);
+            box.remove();
+        };
+
+        minBtn.onclick = function () {
+            if (body.style.display === "none") {
+                body.style.display = "block";
+                sessionStorage.setItem(KEY_MIN, "0");
+            } else {
+                body.style.display = "none";
+                sessionStorage.setItem(KEY_MIN, "1");
+            }
+        };
+
+        let lastRequestTime = 0;
+
+        applyBtn.onclick = async function () {
+
+            const now = Date.now();
+            if (now - lastRequestTime < 4000) {
+                setStatus(status, "Slow down");
+                return;
+            }
+
+            lastRequestTime = now;
+
+            const name = userInput.value.trim();
+            let profile = null;
+
+            try {
+
+                if (!name) {
+                    setStatus(status, "Enter username");
+                    return;
+                }
+
+                const res = await fetch("https://users.roblox.com/v1/usernames/users", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        usernames: [name],
+                        excludeBannedUsers: true
+                    })
+                });
+
+                const data = await res.json().catch(() => null);
+
+                if (!res.ok || !data?.data?.length) {
+                    setStatus(status, "User not found", "red", 2500);
+                    return;
+                }
+
+                const u = data.data[0];
+                profile = { id: u.id, name: u.name, displayName: u.displayName };
+
+                const lastFetch = Number(sessionStorage.getItem(KEY_LAST_FETCH) || 0);
+
+                if (Date.now() - lastFetch > 30000) {
+
+                    const thumbRes = await fetch(
+                        "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=" +
+                        profile.id +
+                        "&size=150x150&format=Png&isCircular=false"
+                    );
+
+                    if (thumbRes.ok) {
+                        const t = await thumbRes.json();
+                        if (t.data?.[0]?.imageUrl) {
+                            profile.avatarUrl = t.data[0].imageUrl;
+                        }
+                    }
+
+                    sessionStorage.setItem(KEY_LAST_FETCH, String(Date.now()));
+                } else {
+                    const old = sessionStorage.getItem(KEY_PROFILE);
+                    if (old) {
+                        try {
+                            const p = JSON.parse(old);
+                            if (p.avatarUrl) profile.avatarUrl = p.avatarUrl;
+                        } catch (e) {}
+                    }
+                }
+
+                sessionStorage.setItem(KEY_PROFILE, JSON.stringify(profile));
+                applyProfile(profile);
+
+                setStatus(status, "Applied", "green", 1500);
+
+            } catch (e) {
+                setStatus(status, "Error", "red", 2000);
+            }
+        };
+    }
+
+    createUI();
+
+    const observer = new MutationObserver(() => {
+        const saved = sessionStorage.getItem(KEY_PROFILE);
+        if (!saved) return;
+        try {
+            applyProfile(JSON.parse(saved));
+        } catch (e) {}
+    });
+
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+
+    setInterval(() => {
+        const saved = sessionStorage.getItem(KEY_PROFILE);
+        if (saved) {
+            try {
+                applyProfile(JSON.parse(saved));
+            } catch (e) {}
+        }
+    }, 10000);
+
+})();
